@@ -235,6 +235,7 @@ function Backup-Netscaler
 
         #[System.Windows.Forms.MessageBox]::Show("")
         <# Old backup File handling
+        $backupFile = Join-Path $BackupLocation -ChildPath "$BackupFileName.tgz"
         #[System.Windows.Forms.MessageBox]::Show($backupFile)
 
         Remove-NSBackup -Session $nssession -Name "$BackupFileName.tgz" -Confirm:$false
@@ -247,8 +248,6 @@ function Backup-Netscaler
         {
             ($backupArr | Sort-Object creationtime)[0] | Remove-NSBackup -Confirm:$false -Session $nssession
         }
-
-        $backupFile = Join-Path $BackupLocation -ChildPath "$BackupFileName.tgz"
 
         if (Test-Path $backupFile -ErrorAction SilentlyContinue)
         {
