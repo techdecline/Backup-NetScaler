@@ -183,7 +183,6 @@ function Backup-Netscaler
     $NetScalerProtocol = $NetScalerProtocol -replace "\W.*$",""
     $BackupFileName = "$BackupFileName-$(get-date -uformat '%d-%m-%Y-%H-%M')"
 
-
     New-Item -Path $BackupLocation -ItemType directory -ErrorAction SilentlyContinue
 
     if ( Get-Module NetScaler)
