@@ -125,26 +125,27 @@ function Create-ScheduledJob
 
 function Backup-Netscaler
 {
+    [CmdletBinding(DefaultParameterSetName="Default")]
     param (
-        [Parameter(Mandatory=$true)]
-        [ValidateScript({$_ -match [IPAddress]$_ })]
+        [Parameter(Mandatory)]
+        [ValidateScript({Test-Connection $_ -Quiet -Count 3})]
         [String]
         $NetScalerIp,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [ValidateSet("HTTP","HTTPS")]
         [String]
         $NetScalerProtocol,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $NetScalerUser,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $NetScalerPassword,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $BackupFileName,
 
@@ -153,30 +154,27 @@ function Backup-Netscaler
         [String]
         $BackupLevel = "full",
 
-        [Parameter(Mandatory=$true)]
-        [ValidatePattern("^\S*\\pscp\.exe$")]
+        [Parameter(Mandatory)]
+        [ValidateScript({Get-Command $_})]
         [String]
         $PathToScp,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $BackupLocation,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory,ParameterSetName="ByMail")]
         [String]
         $EmailSmtp,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory,ParameterSetName="ByMail")]
         [String]
         $EmailFrom,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory,ParameterSetName="ByMail")]
         [String]
         $EmailTo
     )
-
-
-    Import-Module NetScaler -ErrorAction SilentlyContinue
 
     # Setup Persistence Flag
     $persistenceFlag = "persistent"
