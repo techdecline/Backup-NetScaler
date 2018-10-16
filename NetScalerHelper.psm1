@@ -110,166 +110,122 @@ function Create-ScheduledJob
     return $scheduledTask
 }
 
-#######################################################################################################
-# $nsip = NetScaler NS IP Address
-# $NetScalerProtocol = HTTP oder HTTPS
-# $NetScalerUser = NetScaler-Login Nutzername
-# $NetScalerPassword = NetScaler-Login Passwort
-# $BackupFileName = Benennung Backup-File
-# $BackupLevel = full oder basic | http://support.citrix.com/proddocs/topic/ns-system-10-5-map/ns-system-backup1-tsk.html
-# $PathToScp = Speicherort der pscp.exe
-# $BackupLocation = Speicherort des Backup-File (Ordner wird im Skript, wenn nicht vorhanden, angelegt)
-# $SmtpServer = SMTP Address des Mailservers (leere Zeichenkette: kein Mailversand)
-# $MailTo = Mail-Empfänger-Adresse / Verteiler
-#######################################################################################################
-
 function Backup-Netscaler
 {
+    [CmdletBinding(DefaultParameterSetName="Default")]
     param (
-        [Parameter(Mandatory=$true)]
-        [ValidateScript({$_ -match [IPAddress]$_ })]
+        [Parameter(Mandatory)]
+        [ValidateScript({Test-Connection $_ -Quiet -Count 3})]
         [String]
         $NetScalerIp,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [ValidateSet("HTTP","HTTPS")]
         [String]
         $NetScalerProtocol,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $NetScalerUser,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $NetScalerPassword,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
-        $BackupFileName,
+        $BackupFileNamePrefix,
 
         [Parameter(Mandatory=$false)]
         [ValidateSet("full","basic")]
         [String]
         $BackupLevel = "full",
 
-        [Parameter(Mandatory=$true)]
-        [ValidatePattern("^\S*\\pscp\.exe$")]
+        [Parameter(Mandatory)]
+        [ValidateScript({Get-Command $_})]
         [String]
         $PathToScp,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         [String]
         $BackupLocation,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory,ParameterSetName="ByMail")]
         [String]
         $EmailSmtp,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory,ParameterSetName="ByMail")]
         [String]
         $EmailFrom,
 
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory,ParameterSetName="ByMail")]
         [String]
         $EmailTo
     )
-
-
-    Import-Module NetScaler -ErrorAction SilentlyContinue
 
     # Setup Persistence Flag
     $persistenceFlag = "persistent"
 
     # Sanitize Variables
     $NetScalerProtocol = $NetScalerProtocol -replace "\W.*$",""
-    $BackupFileName = "$BackupFileName-$(get-date -uformat '%d-%m-%Y-%H-%M')"
+    $BackupFileName = "$BackupFileNamePrefix-$(get-date -uformat '%d-%m-%Y-%H-%M')"
 
+    if (-not (Test-Path $BackupLocation)) {
+        try {
+            New-Item $BackupLocation -ItemType Directory -ErrorAction Stop
+        }
+        catch [System.Management.Automation.ActionPreferenceStopException] {
+            Write-Error -Message "Could not create backup directory" -ErrorAction Stop
+        }
+    }
 
-    New-Item -Path $BackupLocation -ItemType directory -ErrorAction SilentlyContinue
-
-    if ( Get-Module NetScaler)
+    try {
+        $nsCred = New-Object System.Management.Automation.PSCredential "$NetScalerUser",(ConvertTo-SecureString -AsPlainText $NetScalerPassword -Force)
+        switch ($NetScalerProtocol)
+        {
+            "HTTP" {
+                $nssession = Connect-NetScaler -IPAddress $NetScalerIp -Credential $nsCred -Timeout 60 -ErrorVariable connectionError -PassThru
+            }
+            "HTTPS" {
+                $nssession = Connect-NetScaler -IPAddress $NetScalerIp -Credential $nsCred -Timeout 60 -Https -ErrorVariable connectionError -PassThru
+            }
+            default {}
+        }
+    }
+    catch
     {
-        try {
-            #Set-NSMgmtProtocol $NetScalerProtocol
-            #$nssession = Connect-NSAppliance -NSAddress $NetscalerIp -NSUserName $NetScalerUser -NSPassword $NetScalerPassword -Timeout 60
-            $nsCred = New-Object System.Management.Automation.PSCredential "$NetScalerUser",(ConvertTo-SecureString -AsPlainText $NetScalerPassword -Force)
-            switch ($NetScalerProtocol)
-            {
-                "HTTP" {
-                    $nssession = Connect-NetScaler -IPAddress $NetScalerIp -Credential $nsCred -Timeout 60 -ErrorVariable connectionError -PassThru
-                }
-                "HTTPS" {
-                    $nssession = Connect-NetScaler -IPAddress $NetScalerIp -Credential $nsCred -Timeout 60 -Https -ErrorVariable connectionError -PassThru
-                }
-                default {}
-            }
-        }
-        catch
-        {
-            if ($EmailSmtp) {
-                Send-MailMessage -From $EmailFrom -SmtpServer $EmailSmtp -To $EmailTo -Body "$connectionError" -Subject "Netscaler Backup failed"
-            }
-            return $connectionError
-        }
-        #return $nssession
-        #$payload = @{"level"="full";"filename"="$BackupFileName"}
-        $payload = @{level="full"}
+        Write-Error -Message $PSItem.exception.Message -ErrorAction Stop
+    }
 
-        try {
-            # save config and create system backup
-            Save-NSConfig -Session $nssession -ErrorVariable nitroError
-            New-NSBackup -Session $nssession -Name $BackupFileName -Level $BackupLevel -ErrorVariable nitroError
-        }
-        catch
-        {
-            if ($EmailSmtp) {
-                Send-MailMessage -From $EmailFrom -SmtpServer $EmailSmtp -To $EmailTo -Body "$nitroError" -Subject "Netscaler Backup failed"
-            }
-            return $nitroError
-        }
-        # return "Backup Created."
-        $NetScalerPassword = '"' + $NetScalerPassword + '"'
-        $Arguments = '/c echo y  | ' + " $PathToScp -pw $NetScalerPassword $NetScalerUser@`"$NetScalerIp`":/var/ns_sys_backup/$BackupFileName.tgz $BackupLocation"
-        Start-Process cmd.exe -ArgumentList $Arguments -Wait | Out-Null
+    try {
+        # save config and create system backup
+        Save-NSConfig -Session $nssession -ErrorVariable nitroError
+        New-NSBackup -Session $nssession -Name $BackupFileName -Level $BackupLevel -ErrorVariable nitroError
+    }
+    catch
+    {
+        Write-Error -Message $PSItem.Exception.Message -ErrorAction Stop
+    }
+    $NetScalerPassword = '"' + $NetScalerPassword + '"'
+    $Arguments = '/c echo y  | ' + " $PathToScp -pw $NetScalerPassword $NetScalerUser@`"$NetScalerIp`":/var/ns_sys_backup/$BackupFileName.tgz $BackupLocation"
+    Start-Process cmd.exe -ArgumentList $Arguments -Wait | Out-Null
 
-        #[System.Windows.Forms.MessageBox]::Show("")
-        <# Old backup File handling
-        $backupFile = Join-Path $BackupLocation -ChildPath "$BackupFileName.tgz"
-        #[System.Windows.Forms.MessageBox]::Show($backupFile)
+    # Clear oldest Backup File
+    $backupArr = (Get-NSBackup -Session $nssession) | Where-Object {$_.filename -ne "$BackupFileName.tgz" -and $_.filename -notmatch "$persistenceFlag"}
 
-        Remove-NSBackup -Session $nssession -Name "$BackupFileName.tgz" -Confirm:$false
-        #>
+    if ($backupArr)
+    {
+        ($backupArr | Sort-Object creationtime)[0] | Remove-NSBackup -Confirm:$false -Session $nssession
+    }
 
-        # Clear oldest Backup File
-        $backupArr = (Get-NSBackup -Session $nssession) | Where-Object {$_.filename -ne "$BackupFileName.tgz" -and $_.filename -notmatch "$persistenceFlag"}
-
-        if ($backupArr)
-        {
-            ($backupArr | Sort-Object creationtime)[0] | Remove-NSBackup -Confirm:$false -Session $nssession
-        }
-
-        if (Test-Path $backupFile -ErrorAction SilentlyContinue)
-        {
-            if ($EmailSmtp) {
-                Send-MailMessage -From $EmailFrom -SmtpServer $EmailSmtp -To $EmailTo -Body "NetScaler has been backed up succesfully and stored at $backupFile" -Subject "Netscaler Backup succesfully created"
-            }
-            return $backupFile
-        }
-        else
-        {
-            if ($EmailSmtp) {
-                Send-MailMessage -From $EmailFrom -SmtpServer $EmailSmtp -To $EmailTo -Body "No error was specified." -Subject "Netscaler Backup failed"
-            }
-            return $false
-        }
+    $backupFile = Join-Path -Path $BackupLocation -ChildPath "$backupFileName.tgz"
+    if (Test-Path $backupFile -ErrorAction SilentlyContinue)
+    {
+        return (get-item $backupFile)
     }
     else
     {
-        if ($EmailSmtp) {
-            Send-MailMessage -From $EmailFrom -SmtpServer $EmailSmtp -To $EmailTo -Body "No error was specified." -Subject "Netscaler Backup failed"
-        }
-        $false
+        Write-Error -Message "Could not save backup file at $backupFile" -ErrorAction Stop
     }
 }
 
@@ -287,9 +243,6 @@ function Reset-FormObject
     }
     else
     {
-        #[System.Windows.Forms.MessageBox]::Show($FormObject.Name)
-        #[System.Windows.Forms.MessageBox]::Show($FormObject.GetType())
-
         switch ( $FormObject.GetType() )
         {
             "System.Windows.Controls.Combobox" {
