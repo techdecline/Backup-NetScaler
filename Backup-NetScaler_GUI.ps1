@@ -308,19 +308,29 @@ $WPFbuttonSchedule.Add_Click({
     $exeFilePath = Join-Path $PSScriptRoot -ChildPath ($taskName + ".exe")
 
     $moduleLoadCommand = 'Import-Module ' + $modulePath
-
-    if ($wpfrButtonEmailYes.isChecked)
-    {
-        $backupCommand = 'Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"' + " -EmailSmtp " + '"' + $($settingsObj.EmailSmtp) + '"' +" -EmailFrom " + '"' + $($settingsObj.EmailFrom) + '" ' + " -EmailTo " + '"' + $($settingsObj.EmailTo) + '"'
-    }
+    $backupCommand = 'Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"' 
+    <#
     else {
         $backupCommand = 'Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"'
     }
-    #$backupCommand = 'Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileName " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"'
+
+    if ($wpfrButtonEmailYes.isChecked){
+
+    }#>
 
     $scriptArr += $moduleLoadCommand
+    $scriptArr += 'try {'
     $scriptArr += $backupCommand
-
+    if ($wpfrButtonEmailYes.isChecked) {
+        $scriptArr += 'Send-MailMessage ' + "-Body " + '"' + $($settingsObj.NetscalerIp) + '"' + " -From " + '"' + $($settingsObj.EmailFrom) + '"' + " -SmtpServer " + '"' + $($settingsObj.EmailSmtp) + '"' + " -Subject 'Success: NetScalerBackup' -To " + '"' + $($settingsObj.EmailTo) + '"'
+    }
+    $scriptArr += '}'
+    $scriptArr += 'catch {'
+    $scriptArr += '$PSItem.Exception.Message'
+    if ($wpfrButtonEmailYes.isChecked) {
+        $scriptArr += 'Send-MailMessage -Body $PSItem.Exception.Message -From ' + '"' + $($settingsObj.EmailFrom) + '"' + " -SmtpServer " + '"' + $($settingsObj.EmailSmtp) + '"' + " -Subject 'Error: NetScalerBackup' -To " + '"' + $($settingsObj.EmailTo) + '"'      
+    }
+    $scriptArr += '}'
     $scriptArr | Out-File $backupScriptFile -Force
 
     # END Generate Backup Script
@@ -338,6 +348,7 @@ $WPFbuttonSchedule.Add_Click({
     }
     else {
         [System.Windows.Forms.MessageBox]::Show("Script has been generated at: $backupScriptFile")
+        ise $backupScriptFile
     }
     <#
     $ps2exePath = "'" + "$PSScriptRoot\PS2EXE-v0.5.0.0\ps2exe.ps1" + "'"
