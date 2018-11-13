@@ -346,4 +346,7 @@ function Create-ScheduledJob
     return $scheduledTask
 }
 
-Export-ModuleMember -Function Split-Action,Create-ScheduledJob,Backup-NetScaler,Reset-FormObject
+# external function declarations
+. .\function-Test-NetScalerConnection.ps1
+
+Export-ModuleMember -Function Split-Action,Create-ScheduledJob,Backup-NetScaler,Reset-FormObject,Test-NetScalerConnection
