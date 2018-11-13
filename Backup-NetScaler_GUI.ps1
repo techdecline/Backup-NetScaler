@@ -383,6 +383,9 @@ $WPFbuttonSchedule.Add_Click({
     {
         [System.Windows.Forms.MessageBox]::Show("Task has been created!")
     }
+    else {
+        [System.Windows.Forms.MessageBox]::Show("Task has not been created. Please setup manually!")
+    }
 
     # END Task Definition
 

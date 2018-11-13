@@ -25,7 +25,7 @@ function Split-Action
     }
 }
 
-function Create-ScheduledJob
+function New-ScheduledJob
 {
     param (
         [Parameter(Mandatory=$true)]
@@ -51,63 +51,71 @@ function Create-ScheduledJob
         [PSCredential]$UserAccount
     )
 
-    $clockVar = $HourOfDay.ToString() + ":00"
-
-    $existingJob = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-
-    #return $UserAccount.UserName
-
-    if ($existingJob)
-    {
-        if ($OverwriteExisting)
-        {
-            Unregister-ScheduledTask -InputObject $existingJob -Confirm:$false
+    $osVersion = Get-WmiObject -Class Win32_OperatingSystem
+    switch -regex ($osVersion.Caption) {
+        '^Microsoft Windows Server 2008.*' { 
+            return $null
         }
-        else
-        {
-            return $false
-        }
-    }
-
-
-    Switch ($RepetitionInterval)
-    {
-        "Daily"
+        default {
+            $clockVar = $HourOfDay.ToString() + ":00"
+    
+            $existingJob = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    
+            #return $UserAccount.UserName
+    
+            if ($existingJob)
             {
-                $trigger = New-ScheduledTaskTrigger -At $clockVar -Daily
+                if ($OverwriteExisting)
+                {
+                    Unregister-ScheduledTask -InputObject $existingJob -Confirm:$false
+                }
+                else
+                {
+                    return $false
+                }
             }
-        "Weekly"
+    
+    
+            Switch ($RepetitionInterval)
             {
-                $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $DayOfWeek -At $clockVar
+                "Daily"
+                    {
+                        $trigger = New-ScheduledTaskTrigger -At $clockVar -Daily
+                    }
+                "Weekly"
+                    {
+                        $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $DayOfWeek -At $clockVar
+                    }
             }
+    
+            # Split Action Command
+    
+            $actionObj = Split-Action -ActionCommand $ActionCommand
+            if ($actionObj.Arguments)
+            {
+                $action = New-ScheduledTaskAction -Execute $actionObj.Executable -Argument $actionObj.Arguments
+            }
+            else
+            {
+                $action = New-ScheduledTaskAction -Execute $actionObj.Executable
+            }
+    
+            if ($UserAccount)
+            {
+                $cimSession = New-CimSession -Credential $UserAccount
+                $cred = New-ScheduledTaskPrincipal -LogonType s4U -UserId $UserAccount.UserName
+                $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -CimSession $cimSession #-Principal $cred
+            }
+            else
+            {
+                $userId = $env:USERDOMAIN + "\" + $env:USERNAME
+                # $cred = New-ScheduledTaskPrincipal -LogonType Password -UserId $userId -
+                $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger # -Principal $cred
+            }
+    
+            return $scheduledTask
+        }       
     }
-
-    # Split Action Command
-
-    $actionObj = Split-Action -ActionCommand $ActionCommand
-    if ($actionObj.Arguments)
-    {
-        $action = New-ScheduledTaskAction -Execute $actionObj.Executable -Argument $actionObj.Arguments
-    }
-    else
-    {
-        $action = New-ScheduledTaskAction -Execute $actionObj.Executable
-    }
-
-    if ($UserAccount)
-    {
-        $cimSession = New-CimSession -Credential $UserAccount
-        $cred = New-ScheduledTaskPrincipal -LogonType s4U -UserId $UserAccount.UserName
-        $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -CimSession $cimSession #-Principal $cred
-    }
-    else
-    {
-        $userId = $env:USERDOMAIN + "\" + $env:USERNAME
-        # $cred = New-ScheduledTaskPrincipal -LogonType Password -UserId $userId -
-        $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger # -Principal $cred
-    }
-
-    return $scheduledTask
 }
 
 function Backup-Netscaler
@@ -349,4 +357,4 @@ function Create-ScheduledJob
 # external function declarations
 . .\function-Test-NetScalerConnection.ps1
 
-Export-ModuleMember -Function Split-Action,Create-ScheduledJob,Backup-NetScaler,Reset-FormObject,Test-NetScalerConnection
+Export-ModuleMember -Function Split-Action,New-ScheduledJob,Backup-NetScaler,Reset-FormObject,Test-NetScalerConnection
