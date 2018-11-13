@@ -18,7 +18,7 @@ $inputXML = @"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Netscaler_Backup"
         mc:Ignorable="d"
-        Title="Netscaler Backup Automator" Height="650" Width="525">
+        Title="Netscaler Backup Automator" Height="675" Width="525">
     <Grid>
         <Image x:Name="imageLogo" HorizontalAlignment="Left" Height="100" Margin="10,15,0,0" VerticalAlignment="Top" Width="100" Source="C:\Code\Backup-NetScaler\img\softed.jpg" Visibility="Hidden"/>
         <TextBlock x:Name="textBlock" HorizontalAlignment="Left" Margin="115,43,0,0" TextWrapping="Wrap" Text="Netscaler Backup Automator" VerticalAlignment="Top" Height="30" Width="381" FontFamily="Calibri" FontSize="24" FontWeight="Bold" TextAlignment="Center"/>
@@ -64,6 +64,8 @@ $inputXML = @"
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="75" />
@@ -94,9 +96,10 @@ $inputXML = @"
                 <TextBox Grid.Column="3" Grid.Row="3" Margin="0,5" Height="20" x:Name="textboxFilePrefix" ToolTip="Enter a name prefix for the backup files (date will be automatically added)"></TextBox>
                 <Button Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2" Margin="5" x:Name="buttonImport">Import Configuration</Button>
                 <Button Grid.Column="2" Grid.Row="4" Grid.ColumnSpan="2" Margin="5" x:Name="buttonExport">Export Configuration</Button>
+                <Button Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="4" Margin="5" x:Name="buttonVerify">Verify Connection</Button>
             </Grid>
         </GroupBox>
-        <GroupBox x:Name="groupboxEmail" Header="Email Notification" Margin="5,499,5,5" HorizontalAlignment="Left" VerticalAlignment="Top" Height="auto" Width="490">
+        <GroupBox x:Name="groupboxEmail" Header="Email Notification" Margin="10,525,5,5" HorizontalAlignment="Left" VerticalAlignment="Top" Height="auto" Width="490">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -484,6 +487,23 @@ $wpfrButtonEmailNo.Add_Click({
 
 })
 
+$wpfButtonVerify.Add_Click({
+    $verifyParam = @{
+        ComputerName = $WPFtextboxNSIP.Text
+    }
+    if ($protocol -eq "HTTPS") {
+        $verifyParam.Add("Secure",$True)
+    }
+    $connection = Test-NetScalerConnection @verifyParam
+
+    if ($connection) {
+        [System.Windows.Forms.MessageBox]::Show("HTTPS/S and SSH Connectivity have been verified")
+        
+    }
+    else {
+        [System.Windows.Forms.MessageBox]::Show("Connection refused")
+    }
+})
 # END Event Handler Definition
 
 #$vmpicklistView.items.Add([pscustomobject]@{'VMName'=($_).Name;Status=$_.Status;Other="Yes"})
