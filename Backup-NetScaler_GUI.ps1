@@ -371,12 +371,12 @@ $WPFbuttonSchedule.Add_Click({
 
     if ($Global:CredUserObj)
     {
-        $taskObj = Create-ScheduledJob -DayOfWeek $dayOfWeek -HourOfDay $hour `
+        $taskObj = New-ScheduledJob -DayOfWeek $dayOfWeek -HourOfDay $hour `
             -RepetitionInterval $schedule -TaskName $taskName -OverwriteExisting -ActionCommand "$exeFilePath" -UserAccount $Global:CredUserObj
     }
     else
     {
-        $taskObj = Create-ScheduledJob -DayOfWeek $dayOfWeek -HourOfDay $hour `
+        $taskObj = New-ScheduledJob -DayOfWeek $dayOfWeek -HourOfDay $hour `
             -RepetitionInterval $schedule -TaskName $taskName -OverwriteExisting -ActionCommand "$exeFilePath"
     }
     if ($taskObj)
