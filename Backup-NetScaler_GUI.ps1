@@ -311,7 +311,7 @@ $WPFbuttonSchedule.Add_Click({
     $exeFilePath = Join-Path $PSScriptRoot -ChildPath ($taskName + ".exe")
 
     $moduleLoadCommand = 'Import-Module ' + $modulePath
-    $backupCommand = 'Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"' 
+    $backupCommand = '$backupFile = Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"' 
     <#
     else {
         $backupCommand = 'Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"'
@@ -325,7 +325,7 @@ $WPFbuttonSchedule.Add_Click({
     $scriptArr += 'try {'
     $scriptArr += $backupCommand
     if ($wpfrButtonEmailYes.isChecked) {
-        $scriptArr += 'Send-MailMessage ' + "-Body " + '"' + $($settingsObj.NetscalerIp) + '"' + " -From " + '"' + $($settingsObj.EmailFrom) + '"' + " -SmtpServer " + '"' + $($settingsObj.EmailSmtp) + '"' + " -Subject 'Success: NetScalerBackup' -To " + '"' + $($settingsObj.EmailTo) + '"'
+        $scriptArr += 'Send-MailMessage ' + "-Body " + '"Successfully backed up NetScaler to $($backupFile.Fullname)' + '"' + " -From " + '"' + $($settingsObj.EmailFrom) + '"' + " -SmtpServer " + '"' + $($settingsObj.EmailSmtp) + '"' + " -Subject 'Success: NetScalerBackup' -To " + '"' + $($settingsObj.EmailTo) + '"'
     }
     $scriptArr += '}'
     $scriptArr += 'catch {'
