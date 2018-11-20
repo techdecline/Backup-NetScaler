@@ -102,9 +102,10 @@ function New-ScheduledJob
     
             if ($UserAccount)
             {
-                $cimSession = New-CimSession -Credential $UserAccount
-                $cred = New-ScheduledTaskPrincipal -LogonType s4U -UserId $UserAccount.UserName
-                $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -CimSession $cimSession #-Principal $cred
+                # $cimSession = New-CimSession -Credential $UserAccount
+                # $cred = New-ScheduledTaskPrincipal -UserId $UserAccount.UserName
+                # $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -CimSession $cimSession -Principal $cred
+                $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User $UserAccount.UserName -Password $UserAccount.GetNetworkCredential().Password
             }
             else
             {
@@ -267,7 +268,7 @@ function Reset-FormObject
         }
     }
 }
-
+<#
 function Create-ScheduledJob
 {
     param (
@@ -353,6 +354,7 @@ function Create-ScheduledJob
 
     return $scheduledTask
 }
+#>
 
 # external function declarations
 . .\function-Test-NetScalerConnection.ps1
