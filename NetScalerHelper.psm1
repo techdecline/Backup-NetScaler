@@ -1,4 +1,4 @@
-﻿# Module for Backup-NetScaler Project
+# Module for Backup-NetScaler Project
 
 function Split-Action
 {
@@ -22,6 +22,18 @@ function Split-Action
         Add-Member -InputObject $actionObj -MemberType NoteProperty -Name "Executable" -Value $ActionCommand
         Add-Member -InputObject $actionObj -MemberType NoteProperty -Name "Arguments" -Value $null
         return $actionObj
+    }
+}
+
+function Test-IPAddress {
+    param ($IpAddress)
+
+    $var = $null
+    if ([System.Net.IPAddress]::TryParse($ipaddress,[ref]$var)) {
+        return $true
+    }
+    else {
+        return $false
     }
 }
 
@@ -102,10 +114,9 @@ function New-ScheduledJob
     
             if ($UserAccount)
             {
-                # $cimSession = New-CimSession -Credential $UserAccount
-                # $cred = New-ScheduledTaskPrincipal -UserId $UserAccount.UserName
-                # $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -CimSession $cimSession -Principal $cred
-                $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -User $UserAccount.UserName -Password $UserAccount.GetNetworkCredential().Password
+                $cimSession = New-CimSession -Credential $UserAccount
+                $cred = New-ScheduledTaskPrincipal -LogonType s4U -UserId $UserAccount.UserName
+                $scheduledTask = Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -CimSession $cimSession #-Principal $cred
             }
             else
             {
@@ -190,16 +201,26 @@ function Backup-Netscaler
 
     try {
         $nsCred = New-Object System.Management.Automation.PSCredential "$NetScalerUser",(ConvertTo-SecureString -AsPlainText $NetScalerPassword -Force)
-        switch ($NetScalerProtocol)
-        {
-            "HTTP" {
-                $nssession = Connect-NetScaler -IPAddress $NetScalerIp -Credential $nsCred -Timeout 60 -ErrorVariable connectionError -PassThru
-            }
-            "HTTPS" {
-                $nssession = Connect-NetScaler -IPAddress $NetScalerIp -Credential $nsCred -Timeout 60 -Https -ErrorVariable connectionError -PassThru
-            }
-            default {}
+        
+        $nsSessionParam = @{
+            Credential = $nsCred
+            Timeout = 60
+            ErrorVariable = "connectionError"
+            PassThru = $true
         }
+
+        if (Test-IPAddress -IpAddress $NetScalerIp) {
+            $nsSessionParam.Add("IPAddress",$NetScalerIp)
+        }
+        else {
+            $nsSessionParam.Add("HostName",$NetScalerIp)            
+        }
+
+        if  ($NetScalerProtocol -eq "HTTPS") {
+            $nsSessionParam.Add("HTTPS",$true)
+        }
+        
+        $nssession = Connect-NetScaler @nsSessionParam
     }
     catch
     {
@@ -268,7 +289,7 @@ function Reset-FormObject
         }
     }
 }
-<#
+
 function Create-ScheduledJob
 {
     param (
@@ -354,7 +375,6 @@ function Create-ScheduledJob
 
     return $scheduledTask
 }
-#>
 
 # external function declarations
 . .\function-Test-NetScalerConnection.ps1
