@@ -310,7 +310,7 @@ $WPFbuttonSchedule.Add_Click({
     #$exeFilePath = "$PSScriptRoot\Backup.exe"
     $exeFilePath = Join-Path $PSScriptRoot -ChildPath ($taskName + ".exe")
 
-    $moduleLoadCommand = 'Import-Module ' + $modulePath
+    $moduleLoadCommand = 'Import-Module ' + '"' + $modulePath + '"'
     $backupCommand = '$backupFile = Backup-NetScaler ' + "-NetScalerIp " + '"' + $($settingsObj.NetscalerIp) + '"' + " -NetscalerProtocol " + '"' + $($settingsObj.NetscalerProtocol) + '"' + " -NetScalerUser " + '"' +$($settingsObj.UserName) + '"' + " -NetscalerPassword " + '"' + $($settingsObj.Password) + '"' + " -BackupFileNamePrefix " + '"' + $($settingsObj.FileName) + '"' + " -BackupLevel " + '"' + $($settingsObj.BackupLevel) + '"' + " -PathToScp " + '"' + $($settingsObj.ScpPath) + '"' + " -BackupLocation " + '"' + $($settingsObj.BackupLocation) + '"' 
     <#
     else {
