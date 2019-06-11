@@ -216,7 +216,7 @@ function Backup-Netscaler
         Write-Error -Message $PSItem.Exception.Message -ErrorAction Stop
     }
     $NetScalerPassword = '"' + $NetScalerPassword + '"'
-    $Arguments = '/c echo y  | ' + " $PathToScp -pw $NetScalerPassword $NetScalerUser@`"$NetScalerIp`":/var/ns_sys_backup/$BackupFileName.tgz $BackupLocation"
+    $Arguments = '/c echo y  | ' + " " + '"' + $PathToScp + '"' + " -pw $NetScalerPassword $NetScalerUser@`"$NetScalerIp`":/var/ns_sys_backup/$BackupFileName.tgz" + ' "' + $BackupLocation + '"'
     Start-Process cmd.exe -ArgumentList $Arguments -Wait | Out-Null
 
     # Clear oldest Backup File
